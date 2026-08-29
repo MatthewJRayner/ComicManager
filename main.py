@@ -13,7 +13,7 @@ def main():
         alternate_series="Batman: The New 52",
         series_group="Batman",
         genre="Superhero",
-        synopsis="...",
+        synopsis="Batman faces the Court of Owls, a secret society that has controlled Gotham for centuries.",
         characters=["Batman", "Joker"],
         teams=["Justice League"],
         locations=["Gotham City"],
