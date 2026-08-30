@@ -54,4 +54,53 @@ def copy_archive(source: Path, destination: Path) -> None:
             for filename in source_archive.namelist():
                 data = source_archive.read(filename)
                 destination_archive.writestr(filename, data)
+                
+def write_file(
+    archive: zipfile.ZipFile,
+    filename: str,
+    data: bytes
+) -> None:
+    """
+    Write a file to an open CBZ archive.
+    Created in case further complications or logging is necessary in the writing process,
+    but will be removed if no need for abstraction.
+    """
+    
+    archive.writestr(filename, data)
+    
+def create_with_comic_info(
+    source: Path,
+    destination: Path,
+    comic_info: str
+) -> None:
+    """
+    Creates a new CBZ from an existing CBZ while replacing
+    any existing ComicInfo.xml with supplied metadata
+    """
+    
+    with zipfile.ZipFile(source, "r") as source_archive:
+        with zipfile.ZipFile(
+            destination,
+            "w",
+            compression=zipfile.ZIP_DEFLATED
+        ) as destination_archive:
+            
+            for filename in source_archive.namelist():
+                if filename == "ComicInfo.xml":
+                    continue
+                data = source_archive.read(filename)
+                destination_archive.writestr(filename, data)
+                
+            destination_archive.writestr(
+                "ComicInfo.xml",
+                comic_info.encode("utf-8")
+            )
+
+def replace_archive(source: Path, replacement: Path) -> None:
+    """
+    Atomically replace the source archive with the replacement archive.
+    Will be removed if remains nothing more than a wrapper.
+    """
+    
+    replacement.replace(source)
     
