@@ -31,3 +31,20 @@ class ComicVineClient:
             )
         
         return data
+    
+    def search_volumes(self, name: str) -> list[dict]:
+        """
+        Searches ComicVine for volumes matching a name.
+        """
+        
+        data = self._get(
+            "search",
+            {
+                "query": name,
+                "resources": "volume",
+                "field_list": "id,name,start_year,publisher,count_of_issues",
+            }
+        )
+        
+        return data.get("results", [])
+        
