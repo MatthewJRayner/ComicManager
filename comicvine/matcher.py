@@ -3,11 +3,29 @@ import re
 from difflib import SequenceMatcher
 from dataclasses import dataclass
 
+MINIMUM_SCORE = 0.80
+MINIMUM_SCORE_DIFFERENCE = 0.05
+
 @dataclass
 class VolumeMatch:
     volume: dict | None
     score: float
-    confident: bool
+    status: str
+    
+def get_start_year(candidate: dict) -> int | None:
+    """
+    Returns a candidate's start year as an integer, and returns None when candidate has no valid start year.
+    """
+    start_year = candidate.get("start_year")
+    
+    if start_year is None:
+        return None
+    
+    try:
+        return int(start_year)
+    except (TypeError, ValueError):
+        return None
+    
 
 def normalize_name(name: str) -> str:
     """
@@ -26,15 +44,19 @@ def filter_by_year(
     """
     Removes volumes that started after the issue year. 
     """
+    filtered_candidates = []
     
-    return [
-        candidate
-        for candidate in candidates
-        if (
-            candidate.get("start_year") is None
-            or candidate["start_year"] <= issue_year
-        )
-    ]
+    for candidate in candidates:
+        start_year = get_start_year(candidate)
+        
+        if start_year is None:
+            filtered_candidates.append(candidate)
+            continue
+            
+        if start_year <= issue_year:
+            filtered_candidates.append(candidate)
+            
+    return filtered_candidates
     
     
 def name_similarity(
@@ -66,7 +88,7 @@ def match_volume(
     candidates = filter_by_year(candidates, issue_year)
     
     if not candidates:
-        return VolumeMatch(volume=None, score=0.0, confident=False)
+        return VolumeMatch(volume=None, score=0.0, status="no_match")
     
     scored_candidates = []
     
@@ -78,5 +100,16 @@ def match_volume(
     
     best_score, best_candidate = scored_candidates[0]
     
-    return VolumeMatch(volume=best_candidate, score=best_score, confident=False) # Will revists later to determine confidence levels
+    if best_score < MINIMUM_SCORE:
+        return VolumeMatch(volume=None, score=best_score, status="no_match")
+    
+    if len(scored_candidates) == 1:
+        return VolumeMatch(volume=best_candidate, score=best_score, status="matched")
+    
+    second_score = scored_candidates[1][0]
+    
+    if best_score - second_score < MINIMUM_SCORE_DIFFERENCE:
+        return VolumeMatch(volume=None, score=best_score, status="ambiguous")
+    
+    return VolumeMatch(volume=best_candidate, score=best_score, status="matched")
     

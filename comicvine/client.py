@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 import requests
+
+load_dotenv()
 
 api_key = os.environ["COMICVINE_API_KEY"]
 BASE_URL = "https://comicvine.gamespot.com/api"
@@ -15,9 +18,14 @@ class ComicVineClient:
             "format": "json",
         }
         
+        headers = {
+            "User-Agent": "ComicManager/1.0"
+        }
+        
         response = requests.get(
             f"{BASE_URL}/{endpoint}",
             params=params,
+            headers=headers,
             timeout=10
         )
         
