@@ -3,7 +3,6 @@ from client import ComicVineClient
 
 client = ComicVineClient()
 
-volumes = client.search_volumes("Batman")
+volume = client.get_volume(109498)
 
-for volume in volumes:
-    print(volume)
+print(volume)

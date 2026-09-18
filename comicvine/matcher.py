@@ -12,6 +12,11 @@ class VolumeMatch:
     score: float
     status: str
     
+@dataclass
+class VolumeCandidate:
+    volume: dict
+    score: float
+    
 def get_start_year(candidate: dict) -> int | None:
     """
     Returns a candidate's start year as an integer, and returns None when candidate has no valid start year.
@@ -75,6 +80,31 @@ def name_similarity(
         normalized_b
     ).ratio()
     
+def find_volume_candidates(
+    series: str,
+    issue_year: int,
+    candidates: list[dict]
+) -> list[VolumeCandidate]:
+    """
+    Retunrs ComicVine volumes that are plausible candidates for the requested series and issue year.
+    """
+    
+    candidates = filter_by_year(candidates, issue_year)
+    
+    matching_candidates = []
+    
+    for candidate in candidates:
+        score = name_similarity(series, candidate.get("name", ""))
+        
+        if score >= MINIMUM_SCORE:
+            matching_candidates.append(
+                VolumeCandidate(volume=candidate, score=score)
+            )
+    
+    matching_candidates.sort(key=lambda candidate: candidate.score, reverse=True)
+    
+    return matching_candidates
+
 def match_volume(
     series: str,
     issue_year: int,

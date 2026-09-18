@@ -1,6 +1,6 @@
 import unittest
 
-from comicvine.matcher import normalize_name, filter_by_year, name_similarity, match_volume, VolumeMatch
+from comicvine.matcher import normalize_name, filter_by_year, name_similarity, match_volume, VolumeMatch, find_volume_candidates, VolumeCandidate
 
 class TestMatcher(unittest.TestCase):
     def test_matcher_normalizes(self):
@@ -262,5 +262,102 @@ class TestMatcher(unittest.TestCase):
 
         self.assertEqual(len(result), 1)
         
+        
+    def test_find_volume_candidates(self):
+        candidates = [
+            {
+                "id": 1,
+                "name": "Batman",
+                "start_year": "1940"
+            },
+            {
+                "id": 2,
+                "name": "Batman",
+                "start_year": "2016"
+            },
+            {
+                "id": 3,
+                "name": "Superman",
+                "start_year": "1938"
+            }
+        ]
+
+        results = find_volume_candidates(
+            "Batman",
+            2021,
+            candidates
+        )
+
+        self.assertEqual(len(results), 2)
+
+        self.assertEqual(results[0].volume["id"], 1)
+        self.assertEqual(results[1].volume["id"], 2)
+
+        self.assertEqual(results[0].score, 1.0)
+        self.assertEqual(results[1].score, 1.0)
+        
+    def test_find_volume_candidates_filters_future_volumes(self):
+        candidates = [
+            {
+                "id": 1,
+                "name": "Batman",
+                "start_year": "2016"
+            },
+            {
+                "id": 2,
+                "name": "Batman",
+                "start_year": "2025"
+            }
+        ]
+
+        results = find_volume_candidates(
+            "Batman",
+            2021,
+            candidates
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].volume["id"], 1)
+        
+    def test_find_volume_candidates_filters_unrelated_names(self):
+        candidates = [
+            {
+                "id": 1,
+                "name": "Batman",
+                "start_year": "2016"
+            },
+            {
+                "id": 2,
+                "name": "Superman",
+                "start_year": "2016"
+            }
+        ]
+
+        results = find_volume_candidates(
+            "Batman",
+            2021,
+            candidates
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].volume["id"], 1)
+        
+    def test_find_volume_candidates_returns_empty_list_when_no_match(self):
+        candidates = [
+            {
+                "id": 1,
+                "name": "Superman",
+                "start_year": "2016"
+            }
+        ]
+
+        results = find_volume_candidates(
+            "Batman",
+            2021,
+            candidates
+        )
+
+        self.assertEqual(results, [])
+    
 if __name__ == "__main__":
     unittest.main()

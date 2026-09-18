@@ -55,4 +55,80 @@ class ComicVineClient:
         )
         
         return data.get("results", [])
+    
+    def find_issue(
+        self,
+        volume_id: int,
+        issue_number: str
+    ) -> dict | None:
+        """
+        Finds an issue withing a specifc ComicVine volume. Returns the first matching issue, or None if no issue exists
+        """
+        
+        data = self._get(
+            "issues",
+            {
+                "filter": f"volume:{volume_id},issue_number:{issue_number}",
+                "field_list": "id,name,issue_number,cover_date,volume",
+            }
+        )
+        
+        results = data.get("results", [])
+        
+        if not results:
+            return None
+        
+        return results[0]
+    
+    def get_issue(self, issue_id: int) -> dict:
+        """
+        Retrieves the complete ComicVine issue record.
+        """
+        
+        data = self._get(
+            f"issue/4000-{issue_id}",
+            {
+                "field_list": (
+                    "id,"
+                    "name,"
+                    "issue_number,"
+                    "description,"
+                    "cover_date,"
+                    "volume,"
+                    "person_credits,"
+                    "character_credits,"
+                    "team_credits,"
+                    "location_credits,"
+                    "story_arc_credits,"
+                    "site_detail_url"
+                )
+            }
+        )
+        
+        return data["results"]
+    
+    def get_volume(self, volume_id: int) -> dict:
+        """
+        Retrieves the complete ComicVine volume record.
+        """
+        
+        data = self._get(
+            f"volume/4050-{volume_id}",
+            {
+                "field_list": (
+                    "id,"
+                    "name,"
+                    "start_year,"
+                    "publisher,"
+                    "count_of_issues,"
+                    "description,"
+                    "site_detail_url"
+                )
+            }
+        )
+        
+        return data["results"]
+        
+    
+        
         
