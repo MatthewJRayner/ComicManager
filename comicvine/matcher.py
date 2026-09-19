@@ -101,7 +101,15 @@ def find_volume_candidates(
                 VolumeCandidate(volume=candidate, score=score)
             )
     
-    matching_candidates.sort(key=lambda candidate: candidate.score, reverse=True)
+    def get_year_diff(cand: VolumeCandidate) -> int:
+        start_year_raw = cand.volume.get("start_year")
+        try:
+            start_year = int(start_year_raw) if start_year_raw else issue_year
+        except (ValueError, TypeError):
+            start_year = issue_year
+        return abs(start_year - issue_year)
+    
+    matching_candidates.sort(key=get_year_diff)
     
     return matching_candidates
 

@@ -51,6 +51,7 @@ class ComicVineClient:
                 "query": name,
                 "resources": "volume",
                 "field_list": "id,name,start_year,publisher,count_of_issues",
+                "limit": 40
             }
         )
         
@@ -69,7 +70,7 @@ class ComicVineClient:
             "issues",
             {
                 "filter": f"volume:{volume_id},issue_number:{issue_number}",
-                "field_list": "id,name,issue_number,cover_date,volume",
+                "field_list": "id,name,issue_number,store_date,volume",
             }
         )
         
@@ -93,7 +94,7 @@ class ComicVineClient:
                     "name,"
                     "issue_number,"
                     "description,"
-                    "cover_date,"
+                    "store_date,"
                     "volume,"
                     "person_credits,"
                     "character_credits,"

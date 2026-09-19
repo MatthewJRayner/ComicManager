@@ -1,18 +1,18 @@
 from datetime import date
 from models.comic import Comic
 
-def parse_cover_date(cover_date: str | None) -> tuple[int | None, int | None, int | None]:
+def parse_store_date(store_date: str | None) -> tuple[int | None, int | None, int | None]:
     """
     Converts a ComicVine YYYY-MM-DD date into day, month, year values/
     
     Returns None values when no valid date supplied.
     """
     
-    if not cover_date:
+    if not store_date:
         return None, None, None
     
     try:
-        parsed_date = date.fromisoformat(cover_date)
+        parsed_date = date.fromisoformat(store_date)
     except ValueError:
         return None, None, None
     
@@ -128,7 +128,7 @@ def issue_to_comic(issue: dict, volume:dict) -> Comic:
     if issue_number is None:
         raise ValueError("ComicVine issue does not contain an issue number.")
     
-    day, month, year = parse_cover_date(issue.get("cover_date"))
+    day, month, year = parse_store_date(issue.get("store_date"))
     
     credits = map_person_credits(issue.get("person_credits", []))
     

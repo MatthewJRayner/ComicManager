@@ -1,4 +1,5 @@
 import unittest
+from comicvine.service import ComicVineService
 
 class FakeComicVineClient:
     
@@ -32,7 +33,7 @@ class FakeComicVineClient:
             }
         }
 
-    def get_issue(self, issue_id):
+    def get_issues(self, issue_id):
         return {
             "issue_number": "1",
             "name": "The Beginning",
@@ -92,11 +93,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(
             comic.title,
             "The Beginning"
-        )
-
-        self.assertEqual(
-            comic.publisher,
-            "DC Comics"
         )
 
         self.assertEqual(

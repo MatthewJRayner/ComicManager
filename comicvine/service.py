@@ -20,7 +20,7 @@ class ComicVineService:
         issue_year: int
     ) -> list[VolumeCandidate]:
         """
-        Searches ComicVine for volumes that couldcontain the requested issue
+        Searches ComicVine for volumes that could contain the requested issue
         """
         
         volumes = self.client.search_volumes(series)
@@ -42,7 +42,7 @@ class ComicVineService:
         
         issue = self.client.find_issue(
             volume_id,
-            issue_number
+            issue_number.lstrip('0')
         )
         
         if issue is None:
@@ -53,7 +53,7 @@ class ComicVineService:
             
         volume = self.client.get_volume(volume_id)
         
-        full_issue = self.client.get_issues(
+        full_issue = self.client.get_issue(
             issue["id"]
         )
         
