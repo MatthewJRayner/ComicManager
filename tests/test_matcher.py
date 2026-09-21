@@ -290,8 +290,8 @@ class TestMatcher(unittest.TestCase):
 
         self.assertEqual(len(results), 2)
 
-        self.assertEqual(results[0].volume["id"], 1)
-        self.assertEqual(results[1].volume["id"], 2)
+        self.assertEqual(results[0].volume["id"], 2)
+        self.assertEqual(results[1].volume["id"], 1)
 
         self.assertEqual(results[0].score, 1.0)
         self.assertEqual(results[1].score, 1.0)

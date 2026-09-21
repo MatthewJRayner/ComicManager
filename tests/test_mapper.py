@@ -1,6 +1,6 @@
 import unittest
 
-from comicvine.mapper import issue_to_comic, map_person_credits, parse_cover_date, extract_publisher_name
+from comicvine.mapper import issue_to_comic, map_person_credits, parse_store_date, extract_publisher_name
 
 ISSUE = {
     "character_credits": [
@@ -9,7 +9,7 @@ ISSUE = {
             "name": "Batman"
         }
     ],
-    "cover_date": "2017-05-31",
+    "store_date": "2017-05-31",
     "description": "<p>Translates Batman #1-2.</p>",
     "id": 664516,
     "issue_number": "1",
@@ -120,24 +120,24 @@ class TestMapper(unittest.TestCase):
             ["David Finch"]
         )
         
-    def test_parse_cover_date(self):
-        result = parse_cover_date("2017-05-31")
+    def test_parse_store_date(self):
+        result = parse_store_date("2017-05-31")
 
         self.assertEqual(
             result,
             (31, 5, 2017)
         )
         
-    def test_parse_cover_date_missing(self):
-        result = parse_cover_date(None)
+    def test_parse_store_date_missing(self):
+        result = parse_store_date(None)
 
         self.assertEqual(
             result,
             (None, None, None)
         )
         
-    def test_parse_cover_date_invalid(self):
-        result = parse_cover_date("not-a-date")
+    def test_parse_store_date_invalid(self):
+        result = parse_store_date("not-a-date")
 
         self.assertEqual(
             result,

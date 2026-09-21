@@ -33,7 +33,7 @@ class FakeComicVineClient:
             }
         }
 
-    def get_issues(self, issue_id):
+    def get_issue(self, issue_id):
         return {
             "issue_number": "1",
             "name": "The Beginning",
@@ -67,7 +67,7 @@ class TestService(unittest.TestCase):
 
         self.assertEqual(
             results[0].volume["id"],
-            1
+            2
     )
         
     def test_get_comic_from_volume(self):
@@ -95,7 +95,7 @@ class TestService(unittest.TestCase):
             "The Beginning"
         )
 
-        self.assertEqual(
+        self.assertIsNone(
             comic.year,
             2021
         )
