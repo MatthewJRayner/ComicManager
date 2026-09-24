@@ -4,6 +4,30 @@ from pathlib import Path
 from comicvine.matcher import VolumeCandidate
 from comicvine.filename import parse_filename, ParsedFilename
 from comicvine.service import ComicVineService
+from models.comic import Comic
+from models.overrides import MetadataOverrides
+from metadata.comic_info import comic_to_xml
+from metadata.validator import validate_comic_info
+from cbz.processor import process_cbz
+
+@dataclass
+class ResolvedItem:
+    source: Path
+    parsed: ParsedFilename
+    comic: Comic
+    
+@dataclass
+class BatchItemResult:
+    source: Path
+    parsed: ParsedFilename
+    comic: Comic | None = None
+    error: str | None = None
+    
+@dataclass
+class BatchProcessResult:
+    source: Path
+    success: bool
+    error: str | None = None
 
 @dataclass
 class BatchIdentification:
@@ -25,8 +49,9 @@ def get_series_names(sources: list[Path]) -> set[str]:
     return series_names
     
 class BatchPipeline:
-    def __init__(self, comicvine: ComicVineService):
+    def __init__(self, comicvine: ComicVineService, cbz_processor=process_cbz):
         self.comicvine = comicvine
+        self.cbz_processor = cbz_processor
         
     def identify(self, sources: list[Path]) -> BatchIdentification:
         """
@@ -79,6 +104,71 @@ class BatchPipeline:
             )
             
         identification.selected_volume_id = volume_id
+        
+    def resolve_issues(self, identification: BatchIdentification) -> list[BatchItemResult]:
+        if identification.selected_volume_id is None:
+            raise ValueError("A ComicVine volume must be selected before resolving issues.")
+        
+        results = []
+        
+        for source, parsed in identification.items:
+            try:
+                comic = self.comicvine.get_comic_from_volume(identification.selected_volume_id, parsed.issue)
+                
+                results.append(
+                    BatchItemResult(source=source, parsed=parsed, comic=comic)
+                )
+            except Exception as error:
+                results.append(
+                    BatchItemResult(source=source, parsed=parsed, error=str(error))
+                )
+        
+        return results
+    
+    def apply_overrides(self, results: list[BatchItemResult], overrides: MetadataOverrides | None = None) -> list[BatchItemResult]:
+        """
+        Applies the same metadta overrides to every successfully resolved Comic in the batch.
+        """
+        
+        if overrides is None:
+            return results
+        
+        for result in results:
+            if result.comic is not None:
+                result.comic = overrides.apply_to(result.comic)
+                
+        return results 
+    
+    def process(self, results: list[BatchItemResult]) -> list[BatchProcessResult]:
+        process_results = []
+        
+        for result in results:
+            if result.comic is None:
+                process_results.append(
+                    BatchProcessResult(source=result.source, success=False, error=result.error)
+                )
+
+            try:
+                comic_info = comic_to_xml(result.comic)
+                
+                validate_comic_info(comic_info)
+                
+                self.cbz_processor(result.source, comic_info)
+                
+                process_results.append(
+                    BatchProcessResult(source=result.source, success=True)
+                )
+                
+            except Exception as error:
+                process_results.append(
+                    BatchProcessResult(
+                        source=result.source, success=False, error=str(error)
+                    )
+                )
+                
+        return process_results
+            
+        
         
     
     
