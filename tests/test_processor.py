@@ -137,6 +137,6 @@ class TestProcessor(unittest.TestCase):
                 old_comic_info
             )
             
-            
+    
 if __name__ == "__main__":
     unittest.main()

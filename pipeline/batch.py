@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from enum import Enum
 
 from comicvine.matcher import VolumeCandidate
 from comicvine.filename import parse_filename, ParsedFilename
@@ -8,13 +9,26 @@ from models.comic import Comic
 from models.overrides import MetadataOverrides
 from metadata.comic_info import comic_to_xml
 from metadata.validator import validate_comic_info
-from cbz.processor import process_cbz
+from cbz.processor import process_cbz, process_cbz_to
 
 @dataclass
 class ResolvedItem:
     source: Path
     parsed: ParsedFilename
     comic: Comic
+    
+@dataclass
+class BatchItemStatus(Enum):
+    SUCCESS = "success"
+    UNRESOLVED = "unresolved"
+    FAILED = "failed"
+    
+@dataclass
+class BatchIdentification:
+    series: str
+    items: list[tuple[Path, ParsedFilename]]
+    candidates: list[VolumeCandidate]
+    selected_volume_id: int | None = None
     
 @dataclass
 class BatchItemResult:
@@ -26,15 +40,19 @@ class BatchItemResult:
 @dataclass
 class BatchProcessResult:
     source: Path
-    success: bool
+    parsed: ParsedFilename
+    status: BatchItemStatus
     error: str | None = None
+    
+    @property
+    def success(self) -> bool:
+        return self.status == BatchItemStatus.SUCCESS
 
 @dataclass
-class BatchIdentification:
+class BatchResult:
     series: str
-    items: list[tuple[Path, ParsedFilename]]
-    candidates: list[VolumeCandidate]
-    selected_volume_id: int | None = None
+    selected_volume_id: int
+    results: list[BatchProcessResult]
     
 def get_series_names(sources: list[Path]) -> set[str]:
     """
@@ -49,9 +67,10 @@ def get_series_names(sources: list[Path]) -> set[str]:
     return series_names
     
 class BatchPipeline:
-    def __init__(self, comicvine: ComicVineService, cbz_processor=process_cbz):
+    def __init__(self, comicvine: ComicVineService, cbz_processor=process_cbz, cbz_processor_to=process_cbz_to):
         self.comicvine = comicvine
         self.cbz_processor = cbz_processor
+        self.cbz_processor_to = cbz_processor_to
         
     def identify(self, sources: list[Path]) -> BatchIdentification:
         """
@@ -139,13 +158,16 @@ class BatchPipeline:
                 
         return results 
     
-    def process(self, results: list[BatchItemResult]) -> list[BatchProcessResult]:
+    def process(self, results: list[BatchItemResult], overrides: MetadataOverrides | None = None, output_directory: Path | None = None) -> list[BatchProcessResult]:
+        if overrides is not None:
+            results = self.apply_overrides(results, overrides)
+            
         process_results = []
         
         for result in results:
             if result.comic is None:
                 process_results.append(
-                    BatchProcessResult(source=result.source, success=False, error=result.error)
+                    BatchProcessResult(source=result.source, parsed=result.parsed, status=BatchItemStatus.UNRESOLVED, error=result.error)
                 )
 
             try:
@@ -153,20 +175,43 @@ class BatchPipeline:
                 
                 validate_comic_info(comic_info)
                 
-                self.cbz_processor(result.source, comic_info)
+                if output_directory is None:
+                    self.cbz_processor(result.source, comic_info)
+                    
+                else:
+                    destination = (
+                        output_directory /
+                        result.source.name
+                    )
+                    
+                    self.cbz_processor_to(
+                        results.source,
+                        destination,
+                        comic_info
+                    )
                 
                 process_results.append(
-                    BatchProcessResult(source=result.source, success=True)
+                    BatchProcessResult(source=result.source, parsed=result.parsed, status=BatchItemStatus.SUCCESS)
                 )
                 
             except Exception as error:
                 process_results.append(
                     BatchProcessResult(
-                        source=result.source, success=False, error=str(error)
+                        source=result.source, status=BatchItemStatus.FAILED, parsed=result.parsed, error=str(error)
                     )
                 )
                 
         return process_results
+    
+    def build_result(self, identification: BatchIdentification, process_results: list[BatchProcessResult]) -> BatchResult:
+        if identification.selected_volume_id is None:
+            raise ValueError("A ComicVine volume must be selected before building a batch result.")
+        
+        return BatchResult(
+            series=identification.series,
+            selected_volume_id=identification.selected_volume_id,
+            results=process_results
+        )
             
         
         

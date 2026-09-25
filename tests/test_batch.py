@@ -5,6 +5,9 @@ from comicvine.matcher import VolumeCandidate
 from pipeline.batch import (
     BatchIdentification,
     BatchPipeline,
+    BatchResult,
+    BatchProcessResult,
+    BatchItemStatus
 )
 from models.comic import Comic
 from models.overrides import MetadataOverrides
@@ -644,20 +647,14 @@ class TestBatchPipeline(unittest.TestCase):
             2
         )
 
-        self.assertTrue(
-            process_results[0].success
+        self.assertEqual(
+            BatchItemStatus.SUCCESS,
+            process_results[0].status
         )
 
-        self.assertTrue(
-            process_results[1].success
-        )
-
-        self.assertIsNone(
-            process_results[0].error
-        )
-
-        self.assertIsNone(
-            process_results[1].error
+        self.assertEqual(
+            BatchItemStatus.SUCCESS,
+            process_results[1].status
         )
         
     def test_process_builds_xml_from_overridden_comic(self):
@@ -746,21 +743,14 @@ class TestBatchPipeline(unittest.TestCase):
             4
         )
 
-        self.assertTrue(
-            process_results[0].success
-        )
-
-        self.assertFalse(
-            process_results[1].success
+        self.assertEqual(
+            BatchItemStatus.SUCCESS,
+            process_results[0].status
         )
 
         self.assertEqual(
-            process_results[1].error,
-            "Issue not found"
-        )
-
-        self.assertFalse(
-            process_results[2].success
+            BatchItemStatus.UNRESOLVED,
+            process_results[0].status
         )
 
         # Only #1 and #3 should have reached the CBZ processor.
@@ -802,12 +792,9 @@ class TestBatchPipeline(unittest.TestCase):
             3
         )
 
-        self.assertTrue(
-            process_results[0].success
-        )
-
-        self.assertFalse(
-            process_results[1].success
+        self.assertEqual(
+            BatchItemStatus.SUCCESS,
+            process_results[0].status
         )
 
         self.assertEqual(
@@ -815,8 +802,9 @@ class TestBatchPipeline(unittest.TestCase):
             "CBZ processing failed"
         )
 
-        self.assertTrue(
-            process_results[2].success
+        self.assertEqual(
+            BatchItemStatus.SUCCESS,
+            process_results[2].status
         )
 
         # All three were attempted even though #2 failed.
@@ -825,6 +813,68 @@ class TestBatchPipeline(unittest.TestCase):
             3
         )
     
+    def test_build_result_contains_batch_information(self):
+        sources = [
+            Path("Batman #1 (2021).cbz"),
+            Path("Batman #2 (2021).cbz"),
+        ]
+
+        identification = self.pipeline.identify(sources)
+
+        self.pipeline.select_volume(
+            identification,
+            123
+        )
+
+        process_results = [
+            BatchProcessResult(
+                source=sources[0],
+                parsed=identification.items[0][1],
+                status=BatchItemStatus.SUCCESS
+            ),
+            BatchProcessResult(
+                source=sources[1],
+                parsed=identification.items[1][1],
+                status=BatchItemStatus.UNRESOLVED,
+                error="Issue not found"
+            )
+        ]
+
+        batch_result = self.pipeline.build_result(
+            identification,
+            process_results
+        )
+
+        self.assertEqual(
+            "Batman",
+            batch_result.series
+        )
+
+        self.assertEqual(
+            123,
+            batch_result.selected_volume_id
+        )
+
+        self.assertEqual(
+            process_results,
+            batch_result.results
+        )
+        
+    def test_build_result_requires_selected_volume(self):
+        sources = [
+            Path("Batman #1 (2021).cbz"),
+        ]
+
+        identification = self.pipeline.identify(sources)
+
+        process_results = []
+
+        with self.assertRaises(ValueError):
+            self.pipeline.build_result(
+                identification,
+                process_results
+            )
+        
 
 
 if __name__ == "__main__":
